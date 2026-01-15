@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>眠くなりにくいおやつ診断チャート</title>
+  <style>
+    body{
+      font-family: sans-serif;
+      background: linear-gradient(to bottom right, #ffb6c1, #87cefa);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+      margin:0;
+      padding:24px;
+    }
+    .container{
+      background:#fff;
+      padding:32px 28px;
+      border-radius:16px;
+      width:min(920px, 100%);
+      text-align:center;
+      box-shadow: 0 10px 25px rgba(0,0,0,.08);
+    }
+    h1{ margin: 0 0 14px; font-size: 28px; }
+    h2{ margin: 0 0 10px; font-size: 20px; }
+    p{ margin: 10px 0; }
+    .question{ margin: 12px 0 24px; }
+    .options{ display:flex; justify-content:center; gap:18px; margin-top:12px; flex-wrap:wrap; }
+    button{
+      padding: 14px 28px;
+      border-radius: 22px;
+      border: none;
+      cursor: pointer;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      min-width: 120px;
+    }
+    button.yes{ background:#ff2d8b; }
+    button.no{ background:#0077ff; }
+    ul{ list-style:none; padding:0; margin: 10px 0; }
+    li{ margin: 6px 0; }
+    .skipped{ margin-top: 18px; color:#555; font-style:italic; font-size: 14px; }
+    a{ text-decoration:none; }
+    .cols{ display:grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 8px; text-align:left; }
+    .box{ border:1px solid #eee; border-radius: 14px; padding: 12px 14px; }
+    .box h3{ margin: 0 0 8px; font-size: 16px; text-align:center; }
+    .error{ color:#b00020; font-weight:700; text-align:left; white-space:pre-wrap; }
+    @media (max-width: 640px){ .cols{ grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>眠くなりにくいおやつ診断チャート</h1>
+  <div id="app"><p>読み込み中…</p></div>
+</div>
+
+<script>
+(function(){
+  const app = document.getElementById('app');
+
+  try {
+    // ----------------------
+    // 食べ物（候補）
+    // ※PDFリンクは「HTMLと同じフォルダ」に置いて、
+    //   ファイル名を下の通りにリネームすると確実
+    //   - annin_tofu.pdf
+    //   - lowcarb_basque.pdf
+    //   - okara_burrito.pdf
+    //   - pizza_okara.pdf
+    //   - lowcarb_marupan.pdf
+    //   - lowcarb_warabimochi.pdf
+    //   - lowcarb_gelato.pdf
+    //   - lowcarb_berry_marshmallow.pdf
+    //   - lowcarb_chips.pdf
+    // ----------------------
+    const foods = [
+      // 市販
+      { name: 'ゼロ', url: 'https://www.lotte.co.jp/products/catalogue/choco/11/detail01.html', type: '市販' },
+      { name: 'ゼロ カカオ70％', url: 'https://www.lotte.co.jp/products/catalogue/choco/11/detail06.html', type: '市販' },
+      { name: 'ゼロ ミルクキャンディ', url: 'https://www.lotte.co.jp/products/catalogue/candy/42/detail01.html', type: '市販' },
+      { name: 'ゼロ チューイングキャンディ', url: 'https://www.lotte.co.jp/products/catalogue/candy/42/detail04.html', type: '市販' },
+      { name: 'ゼロ プロテインチョコバー', url: 'https://www.lotte.co.jp/products/catalogue/choco/11/detail09.html', type: '市販' },
+      { name: 'ゼロ グラノーラチョコバー', url: 'https://www.lotte.co.jp/products/catalogue/choco/11/detail10.html', type: '市販' },
+      { name: 'ゼロ シュガーフリービスケット', url: 'https://www.lotte.co.jp/products/catalogue/biscuit/07/detail01.html', type: '市販' },
+      { name: 'ゼロ シュガーフリーココアビスケット', url: 'https://www.lotte.co.jp/products/catalogue/biscuit/07/detail09.html', type: '市販' },
+      { name: 'こんにゃくゼリー', url: 'https://health.orihiro.com/product/result/?cid=69', type: '市販' },
+      { name: 'ゼンブブレッド3種の雑穀', url: 'https://zenb.jp/products/bread-grains01', type: '市販' },
+      { name: 'ゼンブブレッドふわもちロール', url: 'https://zenb.jp/products/bread-fuwamochi01', type: '市販' },
+      { name: 'ゼンブブレッドきなこあんぱん', url: 'https://zenb.jp/products/bread-kinako01', type: '市販' },
+      { name: 'ゼンブブレッドカカオ', url: 'https://zenb.jp/products/bread-cacao01', type: '市販' },
+      { name: 'ゼンブチップス', url: 'https://zenb.jp/products/chips-salt01', type: '市販' },
+      { name: 'ゼンブパスタスナック', url: 'https://zenb.jp/products/pastasnack-salt01', type: '市販' },
+      { name: '6Pチーズ', url: 'https://www.snow6p.jp/', type: '市販' },
+      { name: 'さけるチーズ', url: 'https://www.meg-snow.com/hokkaido100/sakerucheese/', type: '市販' },
+      { name: 'ビオラル 低糖質ナッツ', url: 'https://www.lifecorp.jp/pb/bioral/tmp/item_detail.html?janCode=4972262182830', type: '市販' },
+      { name: 'フリーズドライスープ・味噌汁（無印良品）', url: 'https://www.muji.com/jp/ja/store/cmdty/section/S1080502?web_store=web_section_lv3_search_by_category', type: '市販' },
+
+      // 手作り（PDFや自作ページにリンク可）
+      { name: 'オートミールクッキー', url: 'oatmeal_cookie.pdf', type: '手作り' },
+      { name: '低糖質 杏仁豆腐', url: 'annin_tofu.pdf', type: '手作り' },
+      { name: '低糖質バスクチーズケーキ', url: 'lowcarb_basque.pdf', type: '手作り' },
+      { name: 'おからハムチーズブリトー', url: 'okara_burrito.pdf', type: '手作り' },
+      { name: 'ピザまん風おから蒸しパン', url: 'pizza_okara.pdf', type: '手作り' },
+      { name: '抹茶のスノーボールクッキー', url: 'matcha_snowball_cookie.pdf', type: '手作り' },
+      { name: '低糖質わらび餅', url: 'lowcarb_warabimochi.pdf', type: '手作り' },
+      { name: '低糖質ジェラート', url: 'lowcarb_gelato.pdf', type: '手作り' },
+      { name: '低糖質ベリーマシュマロ', url: 'lowcarb_berry_marshmallow.pdf', type: '手作り' },
+      { name: '低糖質チップス', url: 'lowcarb_chips.pdf', type: '手作り' },
+      { name: '低糖質丸パン', url: 'lowcarb_marupan.pdf', type: '手作り' },
+      // ここに新しいアイテムを追加してください
+    ];
+
+    const ALL = foods.map(f => f.name);
+
+    // ----------------------
+    // あなたの最新分類（Q1/Q2/Q3）
+    // ----------------------
+
+    // Q1（アレルギー）YES のとき残す候補
+    // ※オートミールクッキーはアレルギー対応Verを使わないためQ1=NO
+    const Q1_YES = [
+      'こんにゃくゼリー',
+      'ゼンブブレッド3種の雑穀',
+      'ゼンブブレッドふわもちロール',
+      'ゼンブブレッドきなこあんぱん',
+      'ゼンブブレッドカカオ',
+      'ゼロ チューイングキャンディ',
+      'ゼンブチップス',
+      'ゼンブパスタスナック',
+      '低糖質わらび餅',
+      '低糖質ベリーマシュマロ',
+      '低糖質丸パン',
+    ];
+
+    // Q2（甘い系）
+    const Q2_BOTH = [
+      // いまは該当なし
+    ];
+    const Q2_YES = [
+      'ゼロ','ゼロ カカオ70％','ゼロ ミルクキャンディ','ゼロ チューイングキャンディ',
+      'ゼロ プロテインチョコバー','ゼロ グラノーラチョコバー','ゼロ シュガーフリービスケット','ゼロ シュガーフリーココアビスケット',
+      'こんにゃくゼリー','低糖質 杏仁豆腐','低糖質バスクチーズケーキ','低糖質ジェラート','低糖質わらび餅','低糖質ベリーマシュマロ','抹茶のスノーボールクッキー',
+      'オートミールクッキー',
+      'ゼンブブレッドきなこあんぱん',
+      'ゼンブブレッドカカオ',
+    ];
+
+    const Q2_NO = [
+      '6Pチーズ','さけるチーズ','ビオラル 低糖質ナッツ','ゼンブブレッド3種の雑穀','ゼンブブレッドふわもちロール','ゼンブチップス','ゼンブパスタスナック',
+      'フリーズドライスープ・味噌汁（無印良品）',
+      'おからハムチーズブリトー','ピザまん風おから蒸しパン',
+      '低糖質チップス',
+      '低糖質丸パン',
+    ];
+
+    const Q2_YES_EFFECTIVE = [
+      ...Q2_YES,
+      ...Q2_BOTH
+    ];
+
+    const Q2_NO_EFFECTIVE = [
+      ...Q2_NO,
+      ...Q2_BOTH
+    ];
+
+    // Q3（腹持ち）
+    const Q3_BOTH = [
+      'ゼロ シュガーフリービスケット',
+      'ゼロ シュガーフリーココアビスケット',
+      'ビオラル 低糖質ナッツ',
+      '低糖質バスクチーズケーキ',
+      'フリーズドライスープ・味噌汁（無印良品）',
+      'オートミールクッキー',
+      'ゼンブチップス',
+      'ゼンブパスタスナック',
+      '抹茶のスノーボールクッキー',
+      '低糖質わらび餅',
+    ];
+
+    const Q3_YES = [
+      'ゼロ プロテインチョコバー','ゼロ グラノーラチョコバー','ゼンブブレッド3種の雑穀',
+      'ゼンブブレッドふわもちロール',
+      'ゼンブブレッドきなこあんぱん',
+      'おからハムチーズブリトー','ピザまん風おから蒸しパン',
+      'ゼンブブレッドカカオ',
+      '低糖質丸パン',
+    ];
+    const Q3_NO = [
+      // あなた指定：Q3=NO
+      'ゼロ','ゼロ カカオ70％','ゼロ ミルクキャンディ','ゼロ チューイングキャンディ','こんにゃくゼリー',
+      '6Pチーズ','さけるチーズ',
+      '低糖質 杏仁豆腐','低糖質ジェラート','低糖質ベリーマシュマロ',
+      '低糖質チップス',
+    ];
+
+    const Q3_YES_EFFECTIVE = [
+      ...Q3_YES,
+      ...Q3_BOTH
+    ];
+
+    const Q3_NO_EFFECTIVE = [
+      ...Q3_NO,
+      ...Q3_BOTH
+    ];
+
+    // 表記ゆれ・存在しない名前が混ざっても落ちないようにする
+    function allow(arr){
+      return arr.filter(n => ALL.includes(n));
+    }
+
+    const questions = [
+      {
+        text: 'Q1. 特定原材料（えび、かに、くるみ、小麦、そば、卵、乳、落花生）の中でアレルギーはある？',
+        yes: allow(Q1_YES),
+        no: ALL
+      },
+      {
+        text: 'Q2. 甘い系がいい？',
+        yes: allow(Q2_YES_EFFECTIVE),
+        no: allow(Q2_NO_EFFECTIVE)
+      },
+      {
+        text: 'Q3. 腹持ちを重視したい？',
+        yes: allow(Q3_YES_EFFECTIVE),
+        no: allow(Q3_NO_EFFECTIVE)
+      }
+    ];
+
+    let current = foods.slice();
+    let skipped = [];
+    let index = 0;
+
+    function renderQuestion(){
+      if(index >= questions.length){
+        renderResult();
+        return;
+      }
+      const q = questions[index];
+      app.innerHTML = '';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'question';
+
+      const h2 = document.createElement('h2');
+      h2.textContent = q.text;
+      wrap.appendChild(h2);
+
+      const opts = document.createElement('div');
+      opts.className = 'options';
+
+      const yesBtn = document.createElement('button');
+      yesBtn.className = 'yes';
+      yesBtn.textContent = 'YES';
+      yesBtn.onclick = function(){ answer('yes'); };
+
+      const noBtn = document.createElement('button');
+      noBtn.className = 'no';
+      noBtn.textContent = 'NO';
+      noBtn.onclick = function(){ answer('no'); };
+
+      opts.appendChild(yesBtn);
+      opts.appendChild(noBtn);
+      wrap.appendChild(opts);
+
+      app.appendChild(wrap);
+    }
+
+    function answer(type){
+      const q = questions[index];
+      const allowList = q[type];
+      const trial = current.filter(f => allowList.includes(f.name));
+
+      if(trial.length > 0){
+        current = trial;
+      }else{
+        skipped.push(q.text);
+      }
+
+      index++;
+      renderQuestion();
+    }
+
+    function renderList(arr){
+      const ul = document.createElement('ul');
+      if(!arr || arr.length === 0){
+        const li = document.createElement('li');
+        li.textContent = 'なし';
+        ul.appendChild(li);
+        return ul;
+      }
+
+      arr.forEach(f => {
+        const li = document.createElement('li');
+        const color = (f.type === '手作り') ? '#ff2d8b' : '#0077ff';
+
+        if(f.url){
+          const a = document.createElement('a');
+          a.href = f.url;
+          a.target = '_blank';
+          a.style.color = color;
+          a.textContent = f.name;
+          li.appendChild(a);
+        }else{
+          li.textContent = f.name;
+          li.style.color = color;
+        }
+
+        ul.appendChild(li);
+      });
+
+      return ul;
+    }
+
+    function renderResult(){
+      app.innerHTML = '';
+
+      const h2 = document.createElement('h2');
+      h2.textContent = '診断結果';
+      app.appendChild(h2);
+
+      const p = document.createElement('p');
+      p.textContent = 'あなたにおすすめのおやつ';
+      app.appendChild(p);
+
+      const handmade = current.filter(f => f.type === '手作り');
+      const retail = current.filter(f => f.type === '市販');
+
+      const cols = document.createElement('div');
+      cols.className = 'cols';
+
+      const box1 = document.createElement('div');
+      box1.className = 'box';
+      const h3a = document.createElement('h3');
+      h3a.textContent = '手作り';
+      box1.appendChild(h3a);
+      box1.appendChild(renderList(handmade));
+
+      const box2 = document.createElement('div');
+      box2.className = 'box';
+      const h3b = document.createElement('h3');
+      h3b.textContent = '市販';
+      box2.appendChild(h3b);
+      box2.appendChild(renderList(retail));
+
+      cols.appendChild(box1);
+      cols.appendChild(box2);
+      app.appendChild(cols);
+
+      if(skipped.length){
+        const div = document.createElement('div');
+        div.className = 'skipped';
+        div.innerHTML = '診断に反映されなかった質問：<br>' + skipped.join('<br>');
+        app.appendChild(div);
+      }
+    }
+
+    renderQuestion();
+
+  } catch (err) {
+    app.innerHTML =
+      '<div class="error">ごめん、コードが途中でエラーになって表示できてない！<br><br>' +
+      'エラー内容：' + ((err && err.message) ? err.message : err) +
+      '</div>';
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
